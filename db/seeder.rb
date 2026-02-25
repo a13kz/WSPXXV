@@ -30,11 +30,21 @@ def create_tables(db)
               user TEXT NOT NULL, 
               type TEXT,
               description TEXT)')
+
+  db.execute('CREATE TABLE relation_list (
+              individual_id INTEGER,
+              match_status_i BOOLEAN NOT NULL, 
+              employer_id INTEGER,
+              match_status_e BOOLEAN NOT NULL)')
 end
 
 def populate_tables(db)
   db.execute('INSERT INTO individual (user, description, CV) VALUES ("Alex", "Duktig, lojal, något annat","N/A")')
+  db.execute('INSERT INTO individual (user, description, CV) VALUES ("Balex", "Duktig, lojal, något annat","N/A")')
+  db.execute('INSERT INTO individual (user, description, CV) VALUES ("Bohre", "Duktig, lojal, något annat","N/A")')
+  db.execute('INSERT INTO individual (user, description, CV) VALUES ("Boris", "Duktig, lojal, något annat","N/A")')
   db.execute('INSERT INTO employer (user, type, description) VALUES ("Hird", "mjukvaroutvecklare","det är en jättekul arbetsplats")')
+  db.execute('INSERT INTO relation_list (individual_id, match_status_i, employer_id, match_status_e) VALUES (1, 1,1,1)')
 end
 
 
