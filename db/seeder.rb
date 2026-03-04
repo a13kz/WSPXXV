@@ -36,6 +36,11 @@ def create_tables(db)
               match_status_i BOOLEAN NOT NULL, 
               employer_id INTEGER,
               match_status_e BOOLEAN NOT NULL)')
+  db.execute('CREATE TABLE store (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              users TEXT,
+              type TEXT,
+              pwd_digest TEXT)')
 end
 
 def populate_tables(db)
