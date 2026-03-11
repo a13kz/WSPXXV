@@ -16,32 +16,51 @@ def generate_id(arr)
     return selected_id
 end
 
-get('/hird/signup') do
+get('/start/signup') do
     slim(:"/new_user")
 end
 
-post('/hird/signup') do
+post('/register') do
     user = params["user"]
     pwd = params["pwd"]
     pwd_confirm = params["pwd_confirm"]
 
     db = SQLite3::Database.new("db/databas.db")
+    existing_user=db.execute("SELECT id FROM store WHERE users=?",user)
+    if existing_user.empty?
+        if pwd==pwd_confirm
+            pwd_digest=BCrypt::Password.create(pwd)
+            db.execute("INSERT INTO store (users,pwd_digest) VALUES(?,?)",[user,pwd_digest])
+            id_arr = db.execute("SELECT id FROM individual").flatten
+            redirect("/hird/#{generate_id(id_arr)}")
+        else
+            redirect('/error')
+        end
+    else
+        redirect('/start/login')
+    end
+    
+end
+
+post('/login') do
+
+    user = params["user"]
+    pwd = params["pwd"]
+    db = SQLite3::Database.new("db/databas.db")
     result=db.execute("SELECT id store WHERE users=?",user)
 
-    if pwd==pwd_confirm
-        pwd_digest=BCrypt::Password.create(pwd)
-        db.execute("INSERT INTO store (users,pwd_digest) VALUES(?,?)",[user,pwd_digest])
-        redirect('/hird')
-    else
-        redirect('/error')
-    end
 end
-get('/hird/login') do
+
+get('/start/login') do
     slim(:"/login")
 end
 
-get('/') do
-    redirect('/hird')
+get('/start') do
+    slim(:"/start")
+end
+
+get('/hird') do
+    slim(:"/logged_in")
 end
 
 get('/hird/:id') do
