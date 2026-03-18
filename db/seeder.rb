@@ -18,7 +18,7 @@ def drop_tables(db)
   db.execute('DROP TABLE IF EXISTS individual')
   db.execute('DROP TABLE IF EXISTS employer')
   db.execute('DROP TABLE IF EXISTS relation_list')
-  db.execute('DROP TABLE IF EXISTS store')
+  db.execute('DROP TABLE IF EXISTS users')
 end
 
 def create_tables(db)
@@ -40,10 +40,10 @@ def create_tables(db)
               employer_id INTEGER,
               match_status_e BOOLEAN NOT NULL)')
 
-  db.execute('CREATE TABLE store (
+  db.execute('CREATE TABLE users (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
-              users TEXT,
-              type TEXT,
+              user TEXT,
+              type BOOLEAN,
               pwd_digest TEXT)')
 end
 
@@ -53,8 +53,8 @@ def populate_tables(db)
   db.execute('INSERT INTO individual (user, description, CV) VALUES ("Bohre", "Duktig, lojal, något annat","N/A")')
   db.execute('INSERT INTO individual (user, description, CV) VALUES ("Boris", "Duktig, lojal, något annat","N/A")')
   db.execute('INSERT INTO employer (user, type, description) VALUES ("Hird", "mjukvaroutvecklare","det är en jättekul arbetsplats")')
-  db.execute('INSERT INTO relation_list (individual_id, match_status_i, employer_id, match_status_e) VALUES (1, 1,1,1)')
-  db.execute('INSERT INTO store (users, pwd) VALUES ("", "","")')
+  db.execute('INSERT INTO relation_list (individual_id, match_status_i, employer_id, match_status_e) VALUES (1, 0,0,1)')
+  #db.execute('INSERT INTO users (user, pwd) VALUES ("", "","")')
 end
 
 

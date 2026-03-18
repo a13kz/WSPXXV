@@ -26,11 +26,11 @@ post('/register') do
     pwd_confirm = params["pwd_confirm"]
 
     db = SQLite3::Database.new("db/databas.db")
-    existing_user=db.execute("SELECT id FROM store WHERE users=?",user)
-    if existing_user.empty?
+    result=db.execute("SELECT id FROM users WHERE user=?",user)
+    if result.empty?
         if pwd==pwd_confirm
             pwd_digest=BCrypt::Password.create(pwd)
-            db.execute("INSERT INTO store (users,pwd_digest) VALUES(?,?)",[user,pwd_digest])
+            db.execute("INSERT INTO users (user,pwd_digest) VALUES(?,?)",[user,pwd_digest])
             id_arr = db.execute("SELECT id FROM individual").flatten
             redirect("/hird/#{generate_id(id_arr)}")
         else
@@ -43,11 +43,26 @@ post('/register') do
 end
 
 post('/login') do
-
     user = params["user"]
     pwd = params["pwd"]
+    
     db = SQLite3::Database.new("db/databas.db")
-    result=db.execute("SELECT id store WHERE users=?",user)
+    result=db.execute("SELECT id,pwd_digest FROM users WHERE user=?",user)
+    db.results_as_hash = true
+    
+    if result.empty?
+        redirect('/error')
+    end
+    p 
+    user_id = result.flatten[0]
+    pwd_digest = result.flatten[1]
+#
+    if BCrypt::Password.new(pwd_digest) == pwd
+        session[:user_id] = user_id
+            redirect("/hird/#{user_id}")
+    else
+        redirect('/error')
+    end
 
 end
 
@@ -65,8 +80,7 @@ end
 
 get('/hird/:id') do
     id = params[:id].to_i
-    puts id
-    session[:id] = id
+    p session[:user_id]
     db = SQLite3::Database.new("db/databas.db")
     @selected_user = db.execute("SELECT user FROM individual WHERE id = ?", id).flatten[0]
     slim(:"/index")
@@ -80,12 +94,20 @@ end
 
 post('/hird/add') do
     db = SQLite3::Database.new("db/databas.db")
-    #id = params[:id].to_i
-    login_id = 6
-    selected_user_id = 0
-    #db.execute("SELECT user FROM individual WHERE id = ?", id)
+    id = params[:id].to_i
+    p id
+    login_id = session[:user_id]
+    #if db.execute("SELECT type FROM users WHERE id = ?", id) == "employer"
+    user = db.execute("SELECT user FROM individual WHERE id = ?", id)
     db.results_as_hash = true
     #ändra databas i framtiden
-    db.execute("INSERT INTO relation_list (individual_id,employer_id,match_status_e) VALUES (?,?,?)",[selected_user_id,login_id,1])
-    redirect('/hird')
+    db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e,match_status_i) VALUES (?,?,?,?)",[login_id, id, 1,1])
+    id_arr = db.execute("SELECT id FROM individual").flatten
+    redirect("/hird/#{generate_id(id_arr)}")
+end
+
+get('/dashboard') do
+    p session[:user_id]
+    @user_id = session[:user_id]
+    slim(:"/dashboard")
 end
