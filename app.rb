@@ -23,6 +23,15 @@ post('/register') do
     user = params["user"]
     pwd = params["pwd"]
     pwd_confirm = params["pwd_confirm"]
+    ind = params["ind"]
+    emp = params["emp"]
+    desc = params["desc"]
+
+    if emp
+        type = "emp"
+    elsif ind
+        type = "ind"
+    end
 
     db = SQLite3::Database.new("db/databas.db")
     result=db.execute("SELECT id FROM users WHERE user=?",user)
@@ -30,6 +39,7 @@ post('/register') do
         if pwd==pwd_confirm
             pwd_digest=BCrypt::Password.create(pwd)
             db.execute("INSERT INTO users (user,pwd_digest) VALUES(?,?)",[user,pwd_digest])
+            db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
 
             redirect("/dashboard")
         else
@@ -69,11 +79,23 @@ post('/login') do
 end
 @username = nil
 
+get('/error') do
+    slim(:"/error")
+end
+
 get('/dashboard') do
-    user_id = session[:user_id]
+    if session[:user_id] == nil
+        redirect('/start')
+    end
     db = SQLite3::Database.new("db/databas.db")
-    @username=db.execute("SELECT user FROM users WHERE id=?",user_id)
+    user_id = session[:user_id]
+    @username=db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
     slim(:"/dashboard")
+end
+
+post('/logout') do
+    session[:user_id] = nil
+    redirect('/start')
 end
 
 get('/start/login') do
@@ -90,9 +112,11 @@ end
 
 get('/hird/:id') do
     id = params[:id].to_i
-    #p session[:user_id]
+    session[:selected_id] = id
+    user_id = session[:user_id]
     db = SQLite3::Database.new("db/databas.db")
-    @selected_user = db.execute("SELECT user FROM individual WHERE id = ?", id).flatten[0]
+    @selected_user = db.get_first_value("SELECT user FROM users WHERE id = ?", id)
+    @username=db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
     slim(:"/index")
 end
 
@@ -104,16 +128,20 @@ end
 
 post('/hird/add') do
     db = SQLite3::Database.new("db/databas.db")
-    id = params[:id].to_i    
+    id = session[:selected_id]
     db.results_as_hash = true
-    #p id
-    login_id = session[:user_id]
-    #if db.execute("SELECT type FROM users WHERE id = ?", id) == "employer"
+    p id
+    login_id = session[:user_id].to_i
+    if db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "emp"
+        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[login_id, id, 1])
+    elsif db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "ind"
+        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[id, login_id, 1])
+    end
     #user = db.execute("SELECT user FROM individual WHERE id = ?", id)
 
     #ändra databas i framtiden
-    db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e,match_status_i) VALUES (?,?,?,?)",[login_id, id, 1,1])
-    id_arr = db.execute("SELECT id FROM individual").flatten
-    redirect("/hird/#{generate_id(id_arr)}")
+    
+    #id_arr = db.execute("SELECT id FROM individual").flatten
+    #redirect("/hird/#{generate_id(id_arr)}")
 end
 

@@ -1,7 +1,18 @@
 h1 Sign up
 form action="/register" method="post"
     input type="text" name="user" placeholder="username"
+    br
     input type="password" name="pwd" placeholder="password"
+    br
     input type="password" name="pwd_confirm" placeholder="confirm password"
-    input type="checkbox" name="type" placeholder="type"
+    <form>
+    br
+      <input type="radio" id="emp" name="emp">
+      <label for="emp"> Employer
+      br
+      <input type="radio" id="ind" name="ind">
+      <label for="ind"> Individual
+    br
+    input type="text" name="desc" placeholder="description"
+    br
     input type="submit" value="save"
