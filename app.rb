@@ -24,16 +24,9 @@ post('/register') do
     user = params["user"]
     pwd = params["pwd"]
     pwd_confirm = params["pwd_confirm"]
-    ind = params["ind"]
-    emp = params["emp"]
+    type = params["type"]
     desc = params["desc"]
-
-    if emp
-        type = "emp"
-    elsif ind
-        type = "ind"
-    end
-
+    
     db = SQLite3::Database.new("db/databas.db")
     result=db.execute("SELECT id FROM users WHERE user=?",user)
     if result.empty?
@@ -111,12 +104,16 @@ get('/dashboard') do
 
         #@selected_users=db.execute("SELECT * FROM user_information WHERE id=?",selected_ids)
     end
-   
+    
     #@selected_users=db.execute("SELECT * FROM user_information WHERE id = ?" selected_ids)
     slim(:"/dashboard")
 end
 
 get('/update') do
+    db = SQLite3::Database.new("db/databas.db")
+    db.results_as_hash = true
+    user_id=session[:user_id]
+    @logged_user = db.execute("SELECT * FROM user_information WHERE id=?", user_id).first
     slim(:"/update_user")
 end
 
@@ -126,12 +123,8 @@ post('/update_user') do
     ind = params["ind"]
     emp = params["emp"]
     desc = params["desc"]
+    type = params["type"]
     user_id = session[:user_id]
-    if emp
-        type = "emp"
-    elsif ind
-        type = "ind"
-    end
     p user_id
     # DOES NOT WORK YET
     db.execute("UPDATE user_information SET description = ?, type = ? WHERE id = ? ", [desc,type, user_id])
@@ -146,6 +139,9 @@ end
 post('/delete') do
     db = SQLite3::Database.new("db/databas.db")
     user_id = session[:user_id]
+
+    #db.execute("DELETE FROM users FULL JOIN user_information ON users.id = user_information.id WHERE id=?",user_id)
+
     db.execute("DELETE FROM users WHERE id=?",user_id)
     db.execute("DELETE FROM user_information WHERE id=?",user_id)
     if session[:type] == "emp"
@@ -153,7 +149,7 @@ post('/delete') do
     else
         db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
     end
-    session[:user_id]
+    session[:user_id] = nil
     redirect('/start')
 end
 

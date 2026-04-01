@@ -1,14 +1,15 @@
 h1 = "Updating profile"
 form action="/update_user" method="post"
-    input type="text" name="user" placeholder="username"
+    h2 ="username: #{@logged_user["user"]}"
     <form>
     br
-      <input type="radio" id="emp" name="emp">
-      <label for="emp"> Employer
-      br
-      <input type="radio" id="ind" name="ind">
-      <label for="ind"> Individual
+      <input type="radio" id="emp" name="type"value="emp">
+      <label for="emp"> Employer</label>
+      <input type="radio" id="ind" name="type"value="ind">
+      <label for="ind"> Individual</label>
     br
-    input type="text" name="desc" placeholder="description"
+
+    
+    input type="text" name="desc" placeholder="#{@logged_user["description"]}"
     br
     input type="submit" value="save"
