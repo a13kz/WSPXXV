@@ -92,22 +92,30 @@ get('/dashboard') do
     @type=db.get_first_value("SELECT type FROM user_information WHERE id=?",user_id)
     session[:type] = @type
     if @type == "emp"
-        #needs to fix so match_status have to be null
-        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1")
+        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i IS NULL")
+        @selected_users = []
         selected_ids.each do |id|
-            if id != nil
-                @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-            end
+            @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+            p @selected_users
+        end
+        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i=1")
+        @matched_users = []
+        selected_ids.each do |id|
+            @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
             p @selected_users
         end
     else
-        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id AND match_status_i=1")
+        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id AND match_status_i=1 AND match_status_e IS NULL")
         @selected_users = []
         selected_ids.each do |id|
-            if id != nil
-                @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-            end
+            @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
             p @selected_users
+        end
+        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i=1")
+        @matched_users = []
+        matched_ids.each do |id|
+            @matched_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+            p @matched_users
         end
     end
 

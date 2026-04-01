@@ -8,6 +8,9 @@ h2 = "type: #{@type}"
 - @selected_users.each do |user|
     h2 = "possible connections:"
     h3 = user
+- @matched_users.each do |user|
+    h2 = "matched connections:"
+    h3 = user
 
 form action="/hird/9" method="get"
     input type="submit" value="swipe"
