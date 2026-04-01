@@ -92,20 +92,25 @@ get('/dashboard') do
     @type=db.get_first_value("SELECT type FROM user_information WHERE id=?",user_id)
     session[:type] = @type
     if @type == "emp"
-        selected_ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",user_id)
-        @selected_users=db.execute("SELECT * FROM user_information WHERE id=?",selected_ids)
-        #p selected_ids
-    else
-        selected_ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
+        #needs to fix so match_status have to be null
+        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1")
         selected_ids.each do |id|
-            current_user = db.execute("SELECT user FROM user_information WHERE id=?",id)
-            #p current_user
+            if id != nil
+                @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+            end
+            p @selected_users
         end
-
-        #@selected_users=db.execute("SELECT * FROM user_information WHERE id=?",selected_ids)
+    else
+        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id AND match_status_i=1")
+        @selected_users = []
+        selected_ids.each do |id|
+            if id != nil
+                @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+            end
+            p @selected_users
+        end
     end
-    
-    #@selected_users=db.execute("SELECT * FROM user_information WHERE id = ?" selected_ids)
+
     slim(:"/dashboard")
 end
 
@@ -125,8 +130,7 @@ post('/update_user') do
     desc = params["desc"]
     type = params["type"]
     user_id = session[:user_id]
-    p user_id
-    # DOES NOT WORK YET
+
     db.execute("UPDATE user_information SET description = ?, type = ? WHERE id = ? ", [desc,type, user_id])
     redirect('/dashboard')
 end
@@ -196,20 +200,20 @@ post('/hird/add') do
     id = session[:selected_id]
     db.results_as_hash = false
     p id
-    login_id = session[:user_id].to_i
+    login_id = session[:user_id]
     if db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "emp"
         db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
     elsif db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "ind"
         db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
     end
-
-    if session[:type] == "emp"
-        id_arr = db.execute("SELECT id FROM user_information WHERE type=? AND match_status_i=?",["emp",nil]).flatten
-    else
-        id_arr = db.execute("SELECT id FROM user_information WHERE type=? AND match_status_e=?",["ind",nil]).flatten
-    end
-    #db.results_as_hash = false
-    redirect("/hird/#{generate_id(id_arr)}")
+    #FIX THIS
+    #if session[:type] == "emp"
+    #    id_arr = db.execute("SELECT user_information.id FROM relation_list INNER JOIN relation_list ON user_information.id = relation_list.relation_id WHERE type=? AND match_status_i=?",["emp",nil]).flatten
+    #else
+    #    id_arr = db.execute("SELECT user_information.id FROM relation_list INNER JOIN relation_list ON user_information.id = relation_list.relation_id WHERE type=? AND match_status_e=?",["ind",nil]).flatten
+    #end
+    ##db.results_as_hash = false
+    #redirect("/hird/#{generate_id(id_arr)}")
     #user = db.execute("SELECT user FROM individual WHERE id = ?", id)
 
     #ändra databas i framtiden
