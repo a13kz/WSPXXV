@@ -31,7 +31,8 @@ def create_tables(db)
               individual_id INTEGER,
               match_status_i BOOLEAN, 
               employer_id INTEGER,
-              match_status_e BOOLEAN)')
+              match_status_e BOOLEAN)'
+              )
 
   db.execute('CREATE TABLE users (
               id INTEGER PRIMARY KEY AUTOINCREMENT,

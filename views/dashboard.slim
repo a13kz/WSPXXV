@@ -1,7 +1,19 @@
-h1 = @username
+h1 = "dashboard"
+h2 = "username: #{@username}"
+h2 = "description: #{@desc}"
+h2 = "type: #{@type}"
 
+
+
+/- @selected_users.each do |user|
+/    h1 = user
 
 form action="/hird/9" method="get"
     input type="submit" value="swipe"
+form action="update" method="get"
+    input type="submit" value="update profile"
+form action="delete" method="post"
+    input type="submit" value="delete account"
 form action="logout" method="post"
     input type="submit" value="Log out"
+
