@@ -7,12 +7,22 @@ h2 = "type: #{@type}"
 
 - @selected_users.each do |user|
     h2 = "possible connections:"
-    h3 = user
-- @matched_users.each do |user|
-    h2 = "matched connections:"
-    h3 = user
+    h3 = user    
+    form action="/#{user}/add"method="post"
+        input type="submit" value="add account"
+    form action="/#{user}/remove"method="post"
+        input type="submit" value="delete account"
 
-form action="/hird/9" method="get"
+/- @matched_users.each do |user|
+/    h2 = "matched connections:"
+/    h3 = user
+/    form action="/#{user}/chat"method="post"
+/        input type="submit" value="chat account"
+/    form action="/#{user}/remove"method="post"
+/        input type="submit" value="delete account"
+br
+
+form action="/hird/" method="get"
     input type="submit" value="swipe"
 form action="update" method="get"
     input type="submit" value="update profile"

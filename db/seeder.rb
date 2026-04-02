@@ -15,17 +15,17 @@ def seed!(db)
 end
 
 def drop_tables(db)
-  db.execute('DROP TABLE IF EXISTS user_information')
+  #db.execute('DROP TABLE IF EXISTS user_information')
   db.execute('DROP TABLE IF EXISTS relation_list')
-  db.execute('DROP TABLE IF EXISTS users')
+  #db.execute('DROP TABLE IF EXISTS users')
 end
 
 def create_tables(db)
-  db.execute('CREATE TABLE user_information (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user TEXT NOT NULL,
-              type TEXT,
-              description TEXT)')
+  #db.execute('CREATE TABLE user_information (
+  #            id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            user TEXT NOT NULL,
+  #            type TEXT,
+  #            description TEXT)')
 
   db.execute('CREATE TABLE relation_list (
               individual_id INTEGER FOREIN KEY,
@@ -34,10 +34,10 @@ def create_tables(db)
               match_status_e BOOLEAN)'
               )#
 
-  db.execute('CREATE TABLE users (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user TEXT,
-              pwd_digest TEXT)')
+  #db.execute('CREATE TABLE users (
+  #            id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            user TEXT,
+  #            pwd_digest TEXT)')
 end
 
 def populate_tables(db)

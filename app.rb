@@ -16,6 +16,12 @@ def generate_id(arr)
     return selected_id
 end
 
+def connect_to_db(path)
+    db = SQLite3::Database.new(path)
+    db.results_as_hash = true
+    return db
+end
+
 get('/start/signup') do
     slim(:"/new_user")
 end
@@ -27,7 +33,7 @@ post('/register') do
     type = params["type"]
     desc = params["desc"]
     
-    db = SQLite3::Database.new("db/databas.db")
+    db=connect_to_db("db/databas.db")
     result=db.execute("SELECT id FROM users WHERE user=?",user)
     if result.empty?
         if pwd==pwd_confirm
@@ -49,8 +55,7 @@ post('/login') do
     user = params["user"]
     pwd = params["pwd"]
     
-    db = SQLite3::Database.new("db/databas.db")
-    db.results_as_hash = true
+    db=connect_to_db("db/databas.db")
     
     result=db.execute("SELECT id,pwd_digest FROM users WHERE user=?",user)
     #p result
@@ -73,12 +78,50 @@ post('/login') do
 end
 @username = nil
 
-
+def get_selected_users(type,opposite_type,status_type,opposite_status_type,user_id)
+    db = SQLite3::Database.new("db/databas.db")
+    p type
+  
+    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND user_information.id=?",user_id)
+    p selected_ids
+    selected_users = []
+    selected_ids.each do |id|
+        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+    end
+    return selected_users
+end
 
 get('/error') do
     time = Time.now()
     session[:old_time]
     slim(:"/error")
+end
+
+before('/dashboard') do
+    p "this is before dashboard"
+end
+
+def get_opposite_type(type)
+    if type == "emp"
+        return "ind"
+    else
+        return "emp"
+    end
+end
+def get_type_id(type)
+    if type == "emp"
+        return "employer_id"
+    else
+        return "individual_id"
+    end
+end
+
+def get_status(type)
+    if type == "emp"
+        return "match_status_e"
+    else
+        return "match_status_i"
+    end
 end
 
 get('/dashboard') do
@@ -91,30 +134,8 @@ get('/dashboard') do
     @desc=db.get_first_value("SELECT description FROM user_information WHERE id=?",user_id)
     @type=db.get_first_value("SELECT type FROM user_information WHERE id=?",user_id)
     session[:type] = @type
-    if @type == "emp"
-        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i IS NULL AND user_information.id=?",user_id)
-        @selected_users = []
-        selected_ids.each do |id|
-            @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-        end
-        
-        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i=1 AND user_information.id=?",user_id)
-        @matched_users = []
-        matched_ids.each do |id|
-            @matched_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-        end
-    else
-        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id WHERE match_status_i=1 AND match_status_e IS NULL AND user_information.id=?",user_id)
-        @selected_users = []
-        selected_ids.each do |id|
-            @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-        end
-        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i=1 AND user_information.id=?",user_id)
-        @matched_users = []
-        matched_ids.each do |id|
-            @matched_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-        end
-    end
+
+    @selected_users=get_selected_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     slim(:"/dashboard")
 end
 
@@ -185,16 +206,25 @@ post('/hird/ignore') do
     db = SQLite3::Database.new("db/databas.db")
     id = session[:selected_id]
     login_id = session[:user_id].to_i
-    #db.results_as_hash = true
-    
+
     if session[:type] == "emp"
-        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 0])
-        id_arr = db.execute("SELECT id FROM user_information WHERE type=?",["emp"]).flatten
+        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=?",id)
+        p result
+        if result.include?([login_id])
+            p "matchad"
+            db.execute("UPDATE relation_list SET match_status_e = ? WHERE individual_id = ? ", [0,id])
+        else
+            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 0])
+        end
     else
+        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=?",id)
+        p result
+        if result.include?([login_id])
+            db.execute("UPDATE relation_list SET match_status_i = ?, WHERE employer_id = ? ", [0,id])
+        else
         db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 0])
-        id_arr = db.execute("SELECT id FROM user_information WHERE type=?",["ind"]).flatten
+        end
     end
-    redirect("/hird/#{generate_id(id_arr)}")
 end
 
 post('/hird/add') do
@@ -204,7 +234,7 @@ post('/hird/add') do
     p id
     login_id = session[:user_id]
     if session[:type] == "emp"
-        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=?",id)
+        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",id)
         p result
         if result.include?([login_id])
             p "matchad"
@@ -213,7 +243,7 @@ post('/hird/add') do
             db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
         end
     else
-        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=?",id)
+        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",id)
         p result
         if result.include?([login_id])
             p "matchad"
