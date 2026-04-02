@@ -92,33 +92,29 @@ get('/dashboard') do
     @type=db.get_first_value("SELECT type FROM user_information WHERE id=?",user_id)
     session[:type] = @type
     if @type == "emp"
-        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i IS NULL")
+        selected_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i IS NULL AND user_information.id=?",user_id)
         @selected_users = []
         selected_ids.each do |id|
             @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
         end
         
-        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i=1")
+        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i=1 AND user_information.id=?",user_id)
         @matched_users = []
         matched_ids.each do |id|
             @matched_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-            #p @matched_users
         end
     else
-        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id AND match_status_i=1 AND match_status_e IS NULL")
+        selected_ids=db.execute("SELECT employer_id FROM relation_list INNER JOIN user_information ON relation_list.individual_id = user_information.id WHERE match_status_i=1 AND match_status_e IS NULL AND user_information.id=?",user_id)
         @selected_users = []
         selected_ids.each do |id|
             @selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-            #p @selected_users
         end
-        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id AND match_status_e=1 AND match_status_i=1")
+        matched_ids=db.execute("SELECT individual_id FROM relation_list INNER JOIN user_information ON relation_list.employer_id = user_information.id WHERE match_status_e=1 AND match_status_i=1 AND user_information.id=?",user_id)
         @matched_users = []
         matched_ids.each do |id|
             @matched_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-            #p @matched_users
         end
     end
-    p @selected_users
     slim(:"/dashboard")
 end
 
@@ -156,11 +152,8 @@ post('/delete') do
 
     db.execute("DELETE FROM users WHERE id=?",user_id)
     db.execute("DELETE FROM user_information WHERE id=?",user_id)
-    if session[:type] == "emp"
-        db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
-    else
-        db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
-    end
+    db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
+    db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
     session[:user_id] = nil
     redirect('/start')
 end
@@ -193,6 +186,7 @@ post('/hird/ignore') do
     id = session[:selected_id]
     login_id = session[:user_id].to_i
     #db.results_as_hash = true
+    
     if session[:type] == "emp"
         db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 0])
         id_arr = db.execute("SELECT id FROM user_information WHERE type=?",["emp"]).flatten
@@ -209,10 +203,24 @@ post('/hird/add') do
     db.results_as_hash = false
     p id
     login_id = session[:user_id]
-    if db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "emp"
-        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
-    elsif db.get_first_value("SELECT type FROM user_information WHERE id = ?", login_id) == "ind"
+    if session[:type] == "emp"
+        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=?",id)
+        p result
+        if result.include?([login_id])
+            p "matchad"
+            db.execute("UPDATE relation_list SET match_status_e = ? WHERE individual_id = ? ", [1,id])
+        else
+            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
+        end
+    else
+        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=?",id)
+        p result
+        if result.include?([login_id])
+            p "matchad"
+            db.execute("UPDATE relation_list SET match_status_i = ?, WHERE employer_id = ? ", [1,id])
+        else
         db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
+        end
     end
     #FIX THIS
     #if session[:type] == "emp"
