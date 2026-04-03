@@ -8,21 +8,22 @@ h2 = "type: #{@type}"
 - @selected_users.each do |user|
     h2 = "possible connections:"
     h3 = user    
-    form action="/hird/#{user}/add"method="post"
+    form action="/#{get_id(user,"db/databas.db")}/add"method="post"
         input type="submit" value="add account"
-    form action="/hird/#{user}/remove"method="post"
+    form action="/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 
-/- @matched_users.each do |user|
-/    h2 = "matched connections:"
-/    h3 = user
-/    form action="/#{user}/chat"method="post"
-/        input type="submit" value="chat account"
-/    form action="/#{user}/remove"method="post"
-/        input type="submit" value="delete account"
+- @matched_users.each do |user|
+    h2 = "matched connections:"
+    h3 = user
+    form action="/#{get_id(user,"db/databas.db")}/chat"method="post"
+        input type="submit" value="chat account"
+    form action="/#{get_id(user,"db/databas.db")}/remove"method="post"
+        input type="submit" value="delete account"
 br
 
-form action="/hird/" method="get"
+hr
+form action="/hird/swipe" method="post"
     input type="submit" value="swipe"
 form action="/hird/edit" method="get"
     input type="submit" value="update profile"

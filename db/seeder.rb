@@ -35,10 +35,10 @@ def create_tables(db)
               employer_id INTEGER,
               match_status_e BOOLEAN)'
               )
-  db.execute('CREATE TABLE error_messages (
-              error_id INTEGER PRIMARY KEY AUTOINCREMENT,
-              error_message TEXT'
-              )
+  #db.execute('CREATE TABLE error_messages (
+  #            error_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            error_message TEXT'
+  #            )
   db.execute('CREATE TABLE admins (
               admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
               user TEXT,
