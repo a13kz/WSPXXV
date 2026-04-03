@@ -17,6 +17,8 @@ end
 def drop_tables(db)
   #db.execute('DROP TABLE IF EXISTS user_information')
   db.execute('DROP TABLE IF EXISTS relation_list')
+  db.execute('DROP TABLE IF EXISTS error_messages')
+  db.execute('DROP TABLE IF EXISTS admins')
   #db.execute('DROP TABLE IF EXISTS users')
 end
 
@@ -32,7 +34,15 @@ def create_tables(db)
               match_status_i BOOLEAN FOREIN KEY, 
               employer_id INTEGER,
               match_status_e BOOLEAN)'
-              )#
+              )
+  db.execute('CREATE TABLE error_messages (
+              error_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              error_message TEXT'
+              )
+  db.execute('CREATE TABLE admins (
+              admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user TEXT,
+              pwd_digest TEXT)')
 
   #db.execute('CREATE TABLE users (
   #            id INTEGER PRIMARY KEY AUTOINCREMENT,
