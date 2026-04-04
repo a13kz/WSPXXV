@@ -10,6 +10,8 @@ h2 = "type: #{@type}"
     h3 = user    
     form action="/hird/logged/#{get_id(user,"db/databas.db")}/add"method="post"
         input type="submit" value="add account"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/read"method="get"
+        input type="submit" value="read more"
     form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 
@@ -18,6 +20,8 @@ h2 = "type: #{@type}"
     h3 = user
     form action="/hird/logged/#{get_id(user,"db/databas.db")}/chat"method="post"
         input type="submit" value="chat account"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/read"method="get"
+        input type="submit" value="read more"
     form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 br

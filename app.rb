@@ -3,7 +3,6 @@ require 'slim'
 require 'byebug'
 require 'sqlite3'
 require 'sinatra/reloader'
-require 'sinatra/reloader'
 require 'bcrypt'
 require 'sinatra/flash'
 also_reload 'model'
@@ -19,24 +18,22 @@ end
 
 
 
-def connect_to_db(path)
-    db = SQLite3::Database.new(path)
-    db.results_as_hash = true
-    return db
-end
+
 
 
 get('/hird/signup') do
     slim(:"/new_user")
 end
 
-get("/hird/error") do
+get("/hird/error/:id") do
+    id=params[:id]
+    @error_msg=get_error_message(id)
     slim(:"/error")
 end
 
 
 
-post('/hird/swipe') do
+post('/hird/logged/swipe') do
     login_id = session[:user_id]
     type = session[:type]
     generate_new_path(type,login_id)
@@ -68,6 +65,7 @@ post('/hird/register') do
             db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
             # fixa så man sparar user_id här
             session[:user_id] = get_id(user,"db/databas.db")
+            p get_id(user,"db/databas.db")
             redirect("/hird/logged/dashboard")
         else
             redirect('/hird/1/error')
@@ -109,13 +107,6 @@ before('/hird/login') do
 end
 @username = nil
 
-def check_login(user_id)
-    if user_id == nil
-        p("hej")
-        redirect('/hird')
-    end
-end
-
 before('/hird/logged/:id*') do
     check_login(session[:user_id])
 end
@@ -126,11 +117,6 @@ get('hird/:id/error') do
     error_id = params[:id]
     session[:old_time]
     slim(:"/error")
-end
-
-before('/dashboard') do
-
-    p "this is before dashboard"
 end
 
 def get_opposite_type(type)
@@ -165,9 +151,9 @@ get('/hird/logged/dashboard') do
     end
     db = SQLite3::Database.new("db/databas.db")
     user_id = session[:user_id]
-    @username=db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
-    @desc=db.get_first_value("SELECT description FROM user_information WHERE id=?",user_id)
-    @type=db.get_first_value("SELECT type FROM user_information WHERE id=?",user_id)
+    @username=db.get_first_value("SELECT user FROM user_information WHERE info_id=?",user_id)
+    @desc=db.get_first_value("SELECT description FROM user_information WHERE info_id=?",user_id)
+    @type=db.get_first_value("SELECT type FROM user_information WHERE info_id=?",user_id)
     session[:type] = @type
     @selected_users=get_selected_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     @matched_users=get_matched_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
@@ -179,7 +165,7 @@ get('/hird/logged/edit') do
     db = SQLite3::Database.new("db/databas.db")
     db.results_as_hash = true
     user_id=session[:user_id]
-    @logged_user = db.execute("SELECT * FROM user_information WHERE id=?", user_id).first
+    @logged_user = db.execute("SELECT * FROM user_information WHERE info_id=?", user_id).first
     slim(:"/update_user")
 end
 
@@ -192,7 +178,7 @@ post('/hird/logged/update') do
     type = params["type"]
     user_id = session[:user_id]
 
-    db.execute("UPDATE user_information SET description = ? WHERE id = ? ", [desc, user_id])
+    db.execute("UPDATE user_information SET description = ? WHERE info_id = ? ", [desc, user_id])
     redirect('/hird/logged/dashboard')
 end
 
@@ -205,7 +191,7 @@ post('/hird/logged/delete') do
     db = SQLite3::Database.new("db/databas.db")
     user_id = session[:user_id]
     db.execute("DELETE FROM users WHERE id=?",user_id)
-    db.execute("DELETE FROM user_information WHERE id=?",user_id)
+    db.execute("DELETE FROM user_information WHERE info_id=?",user_id)
     db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
     db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
     session.clear
@@ -227,62 +213,52 @@ get('/hird/logged/:id') do
     session[:selected_id] = id
     user_id = session[:user_id]
     db = SQLite3::Database.new("db/databas.db")
-    @selected_user = db.get_first_value("SELECT user FROM user_information WHERE id = ?", id)
-    @description = db.get_first_value("SELECT description FROM user_information WHERE id = ?", id)
+    @selected_user = db.get_first_value("SELECT user FROM user_information WHERE info_id= ?", id)
+    @description = db.get_first_value("SELECT description FROM user_information WHERE info_id=?", id)
     @username=db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
     slim(:"/index")
 end
 
 post('/hird/logged/ignore') do
-    db = SQLite3::Database.new("db/databas.db")
+
     id = session[:selected_id]
     login_id = session[:user_id]
-
-    if session[:type] == "emp"
-        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=?",id)
-        if result.include?([login_id])
-            db.execute("UPDATE relation_list SET match_status_e = ? WHERE individual_id = ? ", [0,id])
-        else
-            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 0])
-        end
-    else
-        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=?",id)
-        if result.include?([login_id])
-            db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? ", [0,id])
-        else
-            db.execute("INSERT INTO relation_list (employer_id, individual_id,match_status_i) VALUES (?,?,?)",[id,login_id, 0])
-        end
-    end
     type = session[:type]
+    ignore(type,id,login_id)
     generate_new_path(type,login_id)
 end
 
 # fixa med DRY sen
 post('/hird/logged/add') do
-    db = SQLite3::Database.new("db/databas.db")
+    
     id = session[:selected_id]
-    db.results_as_hash = false
     login_id = session[:user_id]
-    if session[:type] == "emp"
-        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",id)
-        p result
-        if result.include?([login_id])
-            p "matchad"
-            db.execute("UPDATE relation_list SET match_status_e=? WHERE individual_id=? AND employer_id=? ", [1,id,login_id])
-        else
-            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
-        end
-    else
-        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",id)
-        p result
-        if result.include?([login_id])
-            p "matchad"
-            db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? AND individual_id=?", [1,id,login_id])
-        else
-        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
-        end
-    end
     type = session[:type]
+    add(type,id,login_id)
     generate_new_path(type,login_id)
 end
 
+post('/hird/logged/:id/remove') do
+    item_id = params[:id].to_i
+    type=session[:type]
+    user_id=session[:user_id]
+    ignore(type,item_id,user_id)
+    redirect('/hird/logged/dashboard')
+end
+
+post('/hird/logged/:id/add') do
+    item_id = params[:id].to_i
+    type=session[:type]
+    user_id=session[:user_id]
+    add(type,item_id,user_id)
+    redirect('/hird/logged/dashboard')
+end
+
+get('/hird/logged/:id/read') do
+    item_id = params[:id].to_i
+    type=session[:type]
+    user_id=session[:user_id]
+    check_ownership(item_id,user_id,type)
+    @selected_user=get_user(item_id)
+    slim(:"/read")
+end

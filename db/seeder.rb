@@ -16,33 +16,33 @@ end
 
 def drop_tables(db)
   #db.execute('DROP TABLE IF EXISTS user_information')
-  db.execute('DROP TABLE IF EXISTS relation_list')
+  #db.execute('DROP TABLE IF EXISTS relation_list')
   db.execute('DROP TABLE IF EXISTS error_messages')
-  db.execute('DROP TABLE IF EXISTS admins')
+  #db.execute('DROP TABLE IF EXISTS admins')
   #db.execute('DROP TABLE IF EXISTS users')
 end
 
 def create_tables(db)
   #db.execute('CREATE TABLE user_information (
-  #            id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            info_id INTEGER PRIMARY KEY AUTOINCREMENT,
   #            user TEXT NOT NULL,
   #            type TEXT,
   #            description TEXT)')
-
-  db.execute('CREATE TABLE relation_list (
-              individual_id INTEGER FOREIN KEY,
-              match_status_i BOOLEAN FOREIN KEY, 
-              employer_id INTEGER,
-              match_status_e BOOLEAN)'
-              )
-  #db.execute('CREATE TABLE error_messages (
-  #            error_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  #            error_message TEXT'
+#
+  #db.execute('CREATE TABLE relation_list (
+  #            individual_id INTEGER FOREIN KEY,
+  #            match_status_i BOOLEAN FOREIN KEY, 
+  #            employer_id INTEGER,
+  #            match_status_e BOOLEAN)'
   #            )
-  db.execute('CREATE TABLE admins (
-              admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user TEXT,
-              pwd_digest TEXT)')
+  db.execute('CREATE TABLE error_messages (
+              error_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              message TEXT)')
+              
+  #db.execute('CREATE TABLE admins (
+  #            admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            user TEXT,
+  #            pwd_digest TEXT)')
 
   #db.execute('CREATE TABLE users (
   #            id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +51,7 @@ def create_tables(db)
 end
 
 def populate_tables(db)
-  #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Alex", "Duktig, lojal, något annat","N/A")')
+  db.execute('INSERT INTO error_messages (message) VALUES("invalid characters")')
   #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Balex", "Duktig, lojal, något annat","N/A")')
   #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Bohre", "Duktig, lojal, något annat","N/A")')
   #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Boris", "Duktig, lojal, något annat","N/A")')

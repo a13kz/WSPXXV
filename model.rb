@@ -1,31 +1,31 @@
 
-
-def test_model()
-return "hej"
-end
-
 def get_selected_users(type,opposite_type,status_type,opposite_status_type,user_id)
     db = SQLite3::Database.new("db/databas.db")
-    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND user_information.id=?",user_id)
+    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.info_id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND user_information.info_id=?",user_id)
     p selected_ids
     selected_users = []
     selected_ids.each do |id|
-        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE info_id=?",id))
     end
     return selected_users
 end
 
 def get_matched_users(type,opposite_type,status_type,opposite_status_type,user_id)
     db = SQLite3::Database.new("db/databas.db")
-    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND user_information.id=?",user_id)
+    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.info_id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND user_information.info_id=?",user_id)
     p selected_ids
     selected_users = []
     selected_ids.each do |id|
-        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE info_id=?",id))
     end
     return selected_users
 end
 
+def connect_to_db(path)
+    db = SQLite3::Database.new(path)
+    db.results_as_hash = true
+    return db
+end
 
 helpers do
     def generate_new_path(type,user_id)
@@ -36,7 +36,7 @@ helpers do
         type_id=get_type_id(type)
         opp_type_id=get_type_id(opp_type)
         match_status_type=get_status(type)
-        arr = db.execute("SELECT id FROM user_information WHERE type=?",opp_type)
+        arr = db.execute("SELECT info_id FROM user_information WHERE type=?",opp_type)
         sub_arr = db.execute("SELECT #{opp_type_id} FROM relation_list WHERE #{type_id}=? AND #{match_status_type} NOT NULL",user_id)
         available=arr-sub_arr
         available=available.flatten
@@ -45,7 +45,7 @@ helpers do
             p "no more users avalible"
             redirect("/hird/logged/dashboard")
         end
-        redirect("/hird/#{selected_id}")
+        redirect("/hird/logged/#{selected_id}")
         return
     end
 end
@@ -67,14 +67,98 @@ end
 helpers do
     def get_id(user,path)
         db=connect_to_db(path)
-        return db.get_first_value("SELECT id FROM user_information WHERE user=?",user)
+        return db.get_first_value("SELECT info_id FROM user_information WHERE user=?",user)
     end
 end
 
 helpers do
   def check_login(user_id)
-    if user_id ||= session[:user_id]
-      redirect('/hird')
+      if user_id == nil
+          p("hej")
+          redirect('/hird')
+      end
+  end
+end
+
+helpers do
+  def check_ownership(id,user_id,type)
+    db=connect_to_db("db/databas.db")
+    db.results_as_hash=false
+    if type =="emp"
+      ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_i=1",user_id).flatten
+      p ids
+      p id
+      if ids.include?(id)
+        return
+        #redirect('/hird/logged/dashboard')
+      else
+        redirect('/hird/error')
+      end
+    else
+      ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
+      p ids
+      p id
+      if ids.include?(id)        
+        return
+        #redirect('/hird/logged/dashboard')
+      else
+        redirect('/hird/error')
+      end
     end
   end
+end
+
+def get_user(id)
+  db=connect_to_db("db/databas.db")
+  result=db.execute("SELECT * FROM user_information WHERE info_id=?",id)
+  return result
+end
+
+def ignore(type,id,login_id)
+    db = SQLite3::Database.new("db/databas.db")
+    if type == "emp"
+        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=?",id)
+        if result.include?([login_id])
+            db.execute("UPDATE relation_list SET match_status_e = ? WHERE individual_id = ? AND employer_id=?", [0,id,login_id])
+        else
+            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 0])
+        end
+    else
+        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=?",id)
+        if result.include?([login_id])
+            db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? AND individual_id=? ", [0,id,login_id])
+        else
+            db.execute("INSERT INTO relation_list (employer_id, individual_id,match_status_i) VALUES (?,?,?)",[id,login_id, 0])
+        end
+    end
+end
+
+def add(type,id,login_id)
+  db = SQLite3::Database.new("db/databas.db")
+  if type == "emp"
+      result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",id)
+      p result
+      if result.include?([login_id])
+          p "matchad"
+          db.execute("UPDATE relation_list SET match_status_e=? WHERE individual_id=? AND employer_id=? ", [1,id,login_id])
+      else
+          db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
+      end
+  else
+      result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",id)
+      p result
+      if result.include?([login_id])
+          p "matchad"
+          db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? AND individual_id=?", [1,id,login_id])
+      else
+      db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
+      end
+  end
+    
+end
+
+def get_error_message(id)
+  db = SQLite3::Database.new("db/databas.db")
+  msg=db.get_first_value("SELECT message FROM error_messages WHERE error_id=?",id)
+  return msg
 end
