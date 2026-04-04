@@ -3,52 +3,21 @@ require 'slim'
 require 'byebug'
 require 'sqlite3'
 require 'sinatra/reloader'
+require 'sinatra/reloader'
 require 'bcrypt'
 require 'sinatra/flash'
+also_reload 'model'
+enable :sessions
 require_relative './model.rb'
 
-enable :sessions
+
+
 
 def validate_password(pass)
     
 end
 
-def validate_username(user)
-    invalid_chars=["@","#","!","'","¤","$"," "]
-    invalid_chars.each do |c|
-        p "hej"
-        if user.include?(c)
-            flash[:error] = "invalid character"
-            redirect("hird/error")
-        end
-    end
-    if user.length > 20
-        redirect("hird/error")
-    end
-end
 
-helpers do
-    def generate_new_path(type,user_id)
-
-        db=connect_to_db("db/databas.db")
-        db.results_as_hash=false
-        opp_type=get_opposite_type(type)
-        type_id=get_type_id(type)
-        opp_type_id=get_type_id(opp_type)
-        match_status_type=get_status(type)
-        arr = db.execute("SELECT id FROM user_information WHERE type=?",opp_type)
-        sub_arr = db.execute("SELECT #{opp_type_id} FROM relation_list WHERE #{type_id}=? AND #{match_status_type} NOT NULL",user_id)
-        available=arr-sub_arr
-        available=available.flatten
-        selected_id = available.sample
-        if available.empty?
-            p "no more users avalible"
-            redirect("/hird/dashboard")
-        end
-        redirect("/hird/#{selected_id}")
-        return
-    end
-end
 
 def connect_to_db(path)
     db = SQLite3::Database.new(path)
@@ -65,12 +34,7 @@ get("/hird/error") do
     slim(:"/error")
 end
 
-helpers do
-    def get_id(user,path)
-        db=connect_to_db(path)
-        return db.get_first_value("SELECT id FROM user_information WHERE user=?",user)
-    end
-end
+
 
 post('/hird/swipe') do
     login_id = session[:user_id]
@@ -104,7 +68,7 @@ post('/hird/register') do
             db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
             # fixa så man sparar user_id här
             session[:user_id] = get_id(user,"db/databas.db")
-            redirect("/hird/dashboard")
+            redirect("/hird/logged/dashboard")
         else
             redirect('/hird/1/error')
         end
@@ -133,7 +97,7 @@ post('/hird/login') do
     if BCrypt::Password.new(pwd_digest) == pwd
         
         session[:user_id] = user_id
-        redirect("/hird/dashboard")
+        redirect("/hird/logged/dashboard")
     else
         redirect('/hird/error')
     end
@@ -145,27 +109,17 @@ before('/hird/login') do
 end
 @username = nil
 
-def get_selected_users(type,opposite_type,status_type,opposite_status_type,user_id)
-    db = SQLite3::Database.new("db/databas.db")
-    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND user_information.id=?",user_id)
-    p selected_ids
-    selected_users = []
-    selected_ids.each do |id|
-        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
+def check_login(user_id)
+    if user_id == nil
+        p("hej")
+        redirect('/hird')
     end
-    return selected_users
 end
 
-def get_matched_users(type,opposite_type,status_type,opposite_status_type,user_id)
-    db = SQLite3::Database.new("db/databas.db")
-    selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND user_information.id=?",user_id)
-    p selected_ids
-    selected_users = []
-    selected_ids.each do |id|
-        selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE id=?",id))
-    end
-    return selected_users
+before('/hird/logged/:id*') do
+    check_login(session[:user_id])
 end
+
 
 get('hird/:id/error') do
     time = Time.now()
@@ -175,6 +129,7 @@ get('hird/:id/error') do
 end
 
 before('/dashboard') do
+
     p "this is before dashboard"
 end
 
@@ -203,7 +158,8 @@ end
 
 
 
-get('/hird/dashboard') do
+get('/hird/logged/dashboard') do
+    p test_model()
     if session[:user_id] == nil
         redirect('/hird')
     end
@@ -219,7 +175,7 @@ get('/hird/dashboard') do
     slim(:"/dashboard")
 end
 
-get('/hird/edit') do
+get('/hird/logged/edit') do
     db = SQLite3::Database.new("db/databas.db")
     db.results_as_hash = true
     user_id=session[:user_id]
@@ -227,7 +183,7 @@ get('/hird/edit') do
     slim(:"/update_user")
 end
 
-post('/hird/update') do
+post('/hird/logged/update') do
     db = SQLite3::Database.new("db/databas.db")
     user = params["user"]
     ind = params["ind"]
@@ -237,15 +193,15 @@ post('/hird/update') do
     user_id = session[:user_id]
 
     db.execute("UPDATE user_information SET description = ? WHERE id = ? ", [desc, user_id])
-    redirect('/hird/dashboard')
+    redirect('/hird/logged/dashboard')
 end
 
-post('/hird/logout') do
+post('/hird/logged/logout') do
     session.clear
     redirect('/hird')
 end
 
-post('/hird/delete') do
+post('/hird/logged/delete') do
     db = SQLite3::Database.new("db/databas.db")
     user_id = session[:user_id]
     db.execute("DELETE FROM users WHERE id=?",user_id)
@@ -266,7 +222,7 @@ get('/hird') do
 end
 
 
-get('/hird/:id') do
+get('/hird/logged/:id') do
     id = params[:id].to_i
     session[:selected_id] = id
     user_id = session[:user_id]
@@ -277,7 +233,7 @@ get('/hird/:id') do
     slim(:"/index")
 end
 
-post('/hird/ignore') do
+post('/hird/logged/ignore') do
     db = SQLite3::Database.new("db/databas.db")
     id = session[:selected_id]
     login_id = session[:user_id]
@@ -302,7 +258,7 @@ post('/hird/ignore') do
 end
 
 # fixa med DRY sen
-post('/hird/add') do
+post('/hird/logged/add') do
     db = SQLite3::Database.new("db/databas.db")
     id = session[:selected_id]
     db.results_as_hash = false

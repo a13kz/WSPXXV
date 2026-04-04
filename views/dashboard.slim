@@ -8,27 +8,27 @@ h2 = "type: #{@type}"
 - @selected_users.each do |user|
     h2 = "possible connections:"
     h3 = user    
-    form action="/#{get_id(user,"db/databas.db")}/add"method="post"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/add"method="post"
         input type="submit" value="add account"
-    form action="/#{get_id(user,"db/databas.db")}/remove"method="post"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 
 - @matched_users.each do |user|
     h2 = "matched connections:"
     h3 = user
-    form action="/#{get_id(user,"db/databas.db")}/chat"method="post"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/chat"method="post"
         input type="submit" value="chat account"
-    form action="/#{get_id(user,"db/databas.db")}/remove"method="post"
+    form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 br
 
 hr
-form action="/hird/swipe" method="post"
+form action="/hird/logged/swipe" method="post"
     input type="submit" value="swipe"
-form action="/hird/edit" method="get"
+form action="/hird/logged/edit" method="get"
     input type="submit" value="update profile"
-form action="/hird/delete" method="post"
+form action="/hird//logged/delete" method="post"
     input type="submit" value="delete account"
-form action="/hird/logout" method="post"
+form action="/hird/logged/logout" method="post"
     input type="submit" value="Log out"
 
