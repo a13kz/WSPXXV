@@ -109,9 +109,9 @@ helpers do
 end
 
 def get_user(id)
-  db=connect_to_db("db/databas.db")
-  result=db.execute("SELECT * FROM user_information WHERE info_id=?",id)
-  return result
+    db=connect_to_db("db/databas.db")
+    result=db.execute("SELECT * FROM user_information WHERE info_id=?",id)
+    return result
 end
 
 def ignore(type,id,login_id)
@@ -134,31 +134,109 @@ def ignore(type,id,login_id)
 end
 
 def add(type,id,login_id)
-  db = SQLite3::Database.new("db/databas.db")
-  if type == "emp"
-      result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",id)
-      p result
-      if result.include?([login_id])
-          p "matchad"
-          db.execute("UPDATE relation_list SET match_status_e=? WHERE individual_id=? AND employer_id=? ", [1,id,login_id])
-      else
-          db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
-      end
-  else
-      result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",id)
-      p result
-      if result.include?([login_id])
-          p "matchad"
-          db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? AND individual_id=?", [1,id,login_id])
-      else
-      db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
-      end
-  end
+    db = SQLite3::Database.new("db/databas.db")
+    if type == "emp"
+        result=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",id)
+        p result
+        if result.include?([login_id])
+            p "matchad"
+            db.execute("UPDATE relation_list SET match_status_e=? WHERE individual_id=? AND employer_id=? ", [1,id,login_id])
+        else
+            db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_e) VALUES (?,?,?)",[id, login_id, 1])
+        end
+    else
+        result=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_e=1",id)
+        p result
+        if result.include?([login_id])
+            p "matchad"
+            db.execute("UPDATE relation_list SET match_status_i = ? WHERE employer_id = ? AND individual_id=?", [1,id,login_id])
+        else
+        db.execute("INSERT INTO relation_list (individual_id, employer_id, match_status_i) VALUES (?,?,?)",[login_id, id, 1])
+        end
+    end
     
 end
 
 def get_error_message(id)
-  db = SQLite3::Database.new("db/databas.db")
-  msg=db.get_first_value("SELECT message FROM error_messages WHERE error_id=?",id)
-  return msg
+    db = SQLite3::Database.new("db/databas.db")
+    msg=db.get_first_value("SELECT message FROM error_messages WHERE error_id=?",id)
+    return msg
+end
+
+def delete_user(user_id)
+    db = SQLite3::Database.new("db/databas.db")
+    db.execute("DELETE FROM users WHERE id=?",user_id)
+    db.execute("DELETE FROM user_information WHERE info_id=?",user_id)
+    db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
+    db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
+    session.clear
+    redirect('/hird')
+end
+
+def check_password(user,pwd)
+    db=connect_to_db("db/databas.db")
+    result=db.execute("SELECT id,pwd_digest FROM users WHERE user=?",user)
+    if result.empty?
+        redirect('/hird/error')
+        return
+    end
+    user_id = result.first["id"]
+    pwd_digest = result.first["pwd_digest"]
+    if BCrypt::Password.new(pwd_digest) == pwd
+        
+        session[:user_id] = user_id
+        redirect("/hird/logged/dashboard")
+    else
+        redirect('/hird/error')
+    end
+end
+
+def check_register(user,pwd,pwd_confirm,type,desc)
+    db=connect_to_db("db/databas.db")
+    result=db.execute("SELECT id FROM users WHERE user=?",user)
+    if result.empty?
+        if pwd==pwd_confirm
+            pwd_digest=BCrypt::Password.create(pwd)
+            db.execute("INSERT INTO users (user,pwd_digest) VALUES(?,?)",[user,pwd_digest])
+            db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
+            session[:user_id] = get_id(user,"db/databas.db")
+            p get_id(user,"db/databas.db")
+            redirect("/hird/logged/dashboard")
+        else
+            redirect('/hird/1/error')
+        end
+    else
+        redirect('/hird/log')
+    end
+end
+
+def get_user_info(user_id)
+    db=connect_to_db("db/databas.db")
+    arr=db.execute("SELECT (user,description,type) FROM user_information WHERE info_id=?",user_id)
+    return arr
+end
+
+def edit_user(user_id)
+    db=connect_to_db("db/databas.db")
+    return db.execute("SELECT * FROM user_information WHERE info_id=?", user_id).first
+end
+
+def update_user(user_id,desc)
+    db=connect_to_db("db/databas.db")
+    db.execute("UPDATE user_information SET description = ? WHERE info_id = ? ", [desc, user_id])
+end
+
+def get_current_item(id)
+    db=connect_to_db("db/databas.db")
+    arr=db.execute("SELECT user,description FROM user_information WHERE info_id=?",id)
+    return arr
+end
+
+def get_username(user_id)
+    db=connect_to_db("db/databas.db")
+    return db.get_first_value("SELECT user FROM user_information WHERE info_id=?",user_id)
+end
+
+def validate_password(pass)
+    
 end
