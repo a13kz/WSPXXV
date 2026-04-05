@@ -43,9 +43,9 @@ helpers do
         selected_id = available.sample
         if available.empty?
             p "no more users avalible"
-            redirect("/hird/logged/dashboard")
+            redirect("/hird/logged/user/dashboard")
         end
-        redirect("/hird/logged/#{selected_id}")
+            redirect("/hird/logged/user/#{selected_id}")
         return
     end
 end
@@ -72,40 +72,39 @@ helpers do
 end
 
 helpers do
-  def check_login(user_id)
-      if user_id == nil
-          p("hej")
-          redirect('/hird')
-      end
-  end
+    def check_login(user_id)
+        if user_id == nil
+            redirect('/hird')
+        end
+    end
 end
 
 helpers do
-  def check_ownership(id,user_id,type)
-    db=connect_to_db("db/databas.db")
-    db.results_as_hash=false
-    if type =="emp"
-      ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_i=1",user_id).flatten
-      p ids
-      p id
-      if ids.include?(id)
-        return
-        #redirect('/hird/logged/dashboard')
-      else
-        redirect('/hird/error')
-      end
-    else
-      ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
-      p ids
-      p id
-      if ids.include?(id)        
-        return
-        #redirect('/hird/logged/dashboard')
-      else
-        redirect('/hird/error')
-      end
+    def check_ownership(id,user_id,type)
+        db=connect_to_db("db/databas.db")
+        db.results_as_hash=false
+        if type =="emp"
+            ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_i=1",user_id).flatten
+            p ids
+            p id
+            if ids.include?(id)
+                return
+            #redirect('/hird/logged/dashboard')
+        else
+            redirect('/hird/error')
+        end
+        else
+            ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
+            p ids
+            p id
+            if ids.include?(id)        
+            return
+            #redirect('/hird/logged/dashboard')
+        else
+            redirect('/hird/error')
+        end
+        end
     end
-  end
 end
 
 def get_user(id)
@@ -169,25 +168,34 @@ def delete_user(user_id)
     db.execute("DELETE FROM user_information WHERE info_id=?",user_id)
     db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
     db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
-    session.clear
-    redirect('/hird')
 end
 
 def check_password(user,pwd)
     db=connect_to_db("db/databas.db")
     result=db.execute("SELECT id,pwd_digest FROM users WHERE user=?",user)
-    if result.empty?
+    admin_result=db.execute("SELECT admin_key,pwd_digest FROM admins WHERE user=?",user)
+    if result.empty? && admin_result.empty?
         redirect('/hird/error')
         return
     end
-    user_id = result.first["id"]
-    pwd_digest = result.first["pwd_digest"]
-    if BCrypt::Password.new(pwd_digest) == pwd
-        
-        session[:user_id] = user_id
-        redirect("/hird/logged/dashboard")
+    if admin_result.empty?
+        user_id = result.first["id"]
+        pwd_digest = result.first["pwd_digest"]
+        if BCrypt::Password.new(pwd_digest) == pwd
+            session[:user_id] = user_id
+            redirect("/hird/logged/user/dashboard")
+        else
+            redirect('/hird/error')
+        end
     else
+        admin_key = admin_result.first["admin_key"]
+        admin_pwd_digest = admin_result.first["pwd_digest"]
+        if BCrypt::Password.new(admin_pwd_digest) == pwd
+            session[:admin_key] = admin_key
+            redirect("/hird/logged/admin")
+        else
         redirect('/hird/error')
+        end
     end
 end
 
@@ -201,7 +209,7 @@ def check_register(user,pwd,pwd_confirm,type,desc)
             db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
             session[:user_id] = get_id(user,"db/databas.db")
             p get_id(user,"db/databas.db")
-            redirect("/hird/logged/dashboard")
+            redirect("/hird/logged/user/dashboard")
         else
             redirect('/hird/1/error')
         end
@@ -219,6 +227,18 @@ end
 def edit_user(user_id)
     db=connect_to_db("db/databas.db")
     return db.execute("SELECT * FROM user_information WHERE info_id=?", user_id).first
+end
+
+
+def edit_selected_user(item_id,user_id)
+    db=connect_to_db("db/databas.db")
+    db.results_as_hash=false
+    arr=db.execute("SELECT admin_id FROM admins").flatten
+    p arr
+    if arr.include?(user_id)
+        db.results_as_hash=true
+        return db.execute("SELECT * FROM user_information WHERE info_id=?", item_id).first
+    end
 end
 
 def update_user(user_id,desc)
@@ -239,4 +259,14 @@ end
 
 def validate_password(pass)
     
+end
+
+def get_users
+    db=connect_to_db("db/databas.db")
+    return db.execute("SELECT * FROM user_information")
+end
+
+def autherization(user_id)
+    db=connect_to_db("db/databas.db")
+
 end

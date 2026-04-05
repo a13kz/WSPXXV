@@ -8,31 +8,31 @@ h2 = "type: #{@type}"
 - @selected_users.each do |user|
     h2 = "possible connections:"
     h3 = user    
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/add"method="post"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/add"method="post"
         input type="submit" value="add account"
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/read"method="get"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/read"method="get"
         input type="submit" value="read more"
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 
 - @matched_users.each do |user|
     h2 = "matched connections:"
     h3 = user
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/chat"method="post"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/chat"method="post"
         input type="submit" value="chat account"
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/read"method="get"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/read"method="get"
         input type="submit" value="read more"
-    form action="/hird/logged/#{get_id(user,"db/databas.db")}/remove"method="post"
+    form action="/hird/logged/user/#{get_id(user,"db/databas.db")}/remove"method="post"
         input type="submit" value="delete account"
 br
 
 hr
-form action="/hird/logged/swipe" method="post"
+form action="/hird/logged/user/swipe" method="post"
     input type="submit" value="swipe"
-form action="/hird/logged/edit" method="get"
+form action="/hird/logged/user/edit" method="get"
     input type="submit" value="update profile"
-form action="/hird//logged/delete" method="post"
+form action="/hird//logged/user/delete" method="post"
     input type="submit" value="delete account"
-form action="/hird/logged/logout" method="post"
+form action="/hird/logged/user/logout" method="post"
     input type="submit" value="Log out"
 

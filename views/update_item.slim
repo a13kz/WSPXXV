@@ -1,6 +1,6 @@
 h1 = "Updating profile"
-form action="/hird/logged/user/update" method="post"
-    h2 ="username: #{@logged_user["user"]}"
+form action="/hird/logged/admin/#{@selected_user["info_id"]}/update" method="post"
+    h2 ="username: #{@selected_user["user"]}"
     <form>
     /br
     /  <input type="radio" id="emp" name="type"value="emp">
@@ -11,6 +11,6 @@ form action="/hird/logged/user/update" method="post"
 
     
     h2="description:"
-    input type="text" name="desc" placeholder="#{@logged_user["description"]}"
+    input type="text" name="desc" placeholder="#{@selected_user["description"]}"
     
     input type="submit" value="save"

@@ -1,5 +1,5 @@
 require 'sqlite3'
-
+require 'bcrypt'
 db = SQLite3::Database.new("databas.db")
 
 
@@ -17,8 +17,8 @@ end
 def drop_tables(db)
   #db.execute('DROP TABLE IF EXISTS user_information')
   #db.execute('DROP TABLE IF EXISTS relation_list')
-  db.execute('DROP TABLE IF EXISTS error_messages')
-  #db.execute('DROP TABLE IF EXISTS admins')
+  #db.execute('DROP TABLE IF EXISTS error_messages')
+  db.execute('DROP TABLE IF EXISTS admins')
   #db.execute('DROP TABLE IF EXISTS users')
 end
 
@@ -35,14 +35,14 @@ def create_tables(db)
   #            employer_id INTEGER,
   #            match_status_e BOOLEAN)'
   #            )
-  db.execute('CREATE TABLE error_messages (
-              error_id INTEGER PRIMARY KEY AUTOINCREMENT,
-              message TEXT)')
+  #db.execute('CREATE TABLE error_messages (
+  #            error_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #            message TEXT)')
               
-  #db.execute('CREATE TABLE admins (
-  #            admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
-  #            user TEXT,
-  #            pwd_digest TEXT)')
+  db.execute('CREATE TABLE admins (
+              admin_key TEXT PRIMARY KEY,
+              user TEXT,
+              pwd_digest TEXT)')
 
   #db.execute('CREATE TABLE users (
   #            id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,13 +51,9 @@ def create_tables(db)
 end
 
 def populate_tables(db)
-  db.execute('INSERT INTO error_messages (message) VALUES("invalid characters")')
-  #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Balex", "Duktig, lojal, något annat","N/A")')
-  #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Bohre", "Duktig, lojal, något annat","N/A")')
-  #db.execute('INSERT INTO individual (user, description, CV) VALUES ("Boris", "Duktig, lojal, något annat","N/A")')
-  #db.execute('INSERT INTO employer (user, type, description) VALUES ("Hird", "mjukvaroutvecklare","det är en jättekul arbetsplats")')
-  #db.execute('INSERT INTO relation_list (individual_id, match_status_i, employer_id, match_status_e) VALUES (1, 0,0,1)')
-  #db.execute('INSERT INTO users (user, pwd) VALUES ("", "","")')
+  #db.execute('INSERT INTO error_messages (message) VALUES("invalid characters")')
+  
+  #db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
 end
 
 

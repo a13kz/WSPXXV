@@ -1,0 +1,19 @@
+/h1 = "admin dashboard"
+/h2 = "username: #{@username}"
+h2="Current users:"
+
+- @users.each do |user|
+    h3 = "username: #{user["user"]}"
+    h3 = "type: #{user["type"]}"
+    h3 = "description: #{user["description"]}"
+    form action="/hird/logged/admin/#{get_id(user["user"],"db/databas.db")}/edit"method="get"
+        input type="submit" value="edit account"
+    form action="/hird/logged/admin/#{get_id(user["user"],"db/databas.db")}/delete"method="post"
+        input type="submit" value="delete account"
+    hr
+
+hr
+
+form action="/hird/logged/admin/logout" method="post"
+    input type="submit" value="Log out"
+
