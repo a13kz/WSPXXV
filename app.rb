@@ -57,6 +57,7 @@ before('/hird/logged/user/*') do
     check_login(session[:user_id])
 end
 before('/hird/logged/admin/*') do
+    p "bajs"
     check_login(session[:admin_key])
 end
 
@@ -102,13 +103,13 @@ get('/hird/logged/user/dashboard') do
     @selected_users=get_selected_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     @matched_users=get_matched_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     p @selected_users
-    slim(:"/dashboard")
+    slim(:"/user/index")
 end
 
 get('/hird/logged/user/edit') do
     user_id=session[:user_id]
-    @selected_user=edit_user(user_id)
-    slim(:"/update_user")
+    @logged_user=edit_user(user_id)
+    slim(:"/user/update_user")
 end
 
 
@@ -125,10 +126,10 @@ post('/hird/logged/admin/:id/update') do
     item_id = params[:id]
 
     update_user(item_id,desc)
-    redirect('/hird/logged/admin')
+    redirect('/hird/logged/admin/dashboard')
 end
 
-post('/hird/logged/user/logout') do
+post('/hird/logged/logout') do
     session.clear
     redirect('/hird')
 end
@@ -178,7 +179,7 @@ end
 post('/hird/logged/admin/:id/delete') do
     item_id = params[:id].to_i
     delete_user(item_id)
-    redirect('/hird/logged/admin')
+    redirect('/hird/logged/admin/dashboard')
 end
 post('/hird/logged/user/:id/add') do
     item_id = params[:id].to_i
@@ -194,13 +195,13 @@ get('/hird/logged/user/:id/read') do
     user_id=session[:user_id]
     check_ownership(item_id,user_id,type)
     @selected_user=get_user(item_id)
-    slim(:"/read")
+    slim(:"/user/read")
 end
 
-get('/hird/logged/admin') do
+get('/hird/logged/admin/dashboard') do
     user_id = session[:user_id]
     @users=get_users
-    slim(:"/admin_dash")
+    slim(:"/admin/admin_index")
 end
 
 get('/hird/logged/user/:id') do
@@ -211,14 +212,17 @@ get('/hird/logged/user/:id') do
     @selected_user = arr.first["user"]
     @description = arr.first["description"]
     @username=get_username(user_id)
-    slim(:"/index")
+    slim(:"/user/main")
 end
 get('/hird/logged/admin/:id/edit') do
     item_id=params[:id].to_i
-    user_id=session[:user_id]
-    p edit_selected_user(item_id,user_id)
+    admin_key=session[:admin_key]
+    p edit_selected_user(item_id,admin_key)
     p item_id
-    @selected_user=edit_selected_user(item_id,user_id)
-    slim(:"/update_item")
+    @selected_user=edit_selected_user(item_id,admin_key)
+    slim(:"/admin/update_item")
 end
 
+get('/hird/logged/user/:id/chat') do
+    slim(:"/user/chat")
+end

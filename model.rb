@@ -109,6 +109,7 @@ end
 
 def get_user(id)
     db=connect_to_db("db/databas.db")
+    p "hej"
     result=db.execute("SELECT * FROM user_information WHERE info_id=?",id)
     return result
 end
@@ -192,7 +193,7 @@ def check_password(user,pwd)
         admin_pwd_digest = admin_result.first["pwd_digest"]
         if BCrypt::Password.new(admin_pwd_digest) == pwd
             session[:admin_key] = admin_key
-            redirect("/hird/logged/admin")
+            redirect("/hird/logged/admin/dashboard")
         else
         redirect('/hird/error')
         end
@@ -230,12 +231,12 @@ def edit_user(user_id)
 end
 
 
-def edit_selected_user(item_id,user_id)
+def edit_selected_user(item_id,admin_key)
     db=connect_to_db("db/databas.db")
     db.results_as_hash=false
-    arr=db.execute("SELECT admin_id FROM admins").flatten
+    arr=db.execute("SELECT admin_key FROM admins").flatten
     p arr
-    if arr.include?(user_id)
+    if arr.include?(admin_key)
         db.results_as_hash=true
         return db.execute("SELECT * FROM user_information WHERE info_id=?", item_id).first
     end
