@@ -9,8 +9,11 @@ also_reload 'model'
 enable :sessions
 require_relative './model.rb'
 
+#include Model
+
+
 get('/hird/signup') do
-    slim(:"/new_user")
+    slim(:"user/new")
 end
 
 get("/hird/error/:id") do
@@ -18,8 +21,6 @@ get("/hird/error/:id") do
     @error_msg=get_error_message(id)
     slim(:"/error")
 end
-
-
 
 post('/hird/logged/user/swipe') do
     login_id = session[:user_id]
@@ -34,8 +35,6 @@ before('/hird/register') do
     validate_password(params["pwd"])
     validate_username(params["user"])
 end
-
-
 
 post('/hird/register') do
     user = params["user"]
@@ -57,7 +56,6 @@ before('/hird/logged/user/*') do
     check_login(session[:user_id])
 end
 before('/hird/logged/admin/*') do
-    p "bajs"
     check_login(session[:admin_key])
 end
 
@@ -82,7 +80,6 @@ def get_type_id(type)
         return "individual_id"
     end
 end
-
 def get_status(type)
     if type == "emp"
         return "match_status_e"
@@ -90,8 +87,6 @@ def get_status(type)
         return "match_status_i"
     end
 end
-
-
 
 get('/hird/logged/user/dashboard') do
     user_id = session[:user_id]
@@ -103,16 +98,21 @@ get('/hird/logged/user/dashboard') do
     @selected_users=get_selected_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     @matched_users=get_matched_users(get_type_id(@type),get_type_id(get_opposite_type(@type)),get_status(@type),get_status(get_opposite_type(@type)),user_id)
     p @selected_users
-    slim(:"/user/index")
+    slim(:"/user/start")
 end
 
 get('/hird/logged/user/edit') do
     user_id=session[:user_id]
     @logged_user=edit_user(user_id)
-    slim(:"/user/update_user")
+    slim(:"/user/edit")
 end
 
-
+def login_user(user_id)
+    session[:user_id]=user_id
+end
+def login_admin(admin_key)
+    session[:admin_key]=admin_key
+end
 
 post('/hird/logged/user/update') do
     desc = params["desc"]
@@ -201,7 +201,7 @@ end
 get('/hird/logged/admin/dashboard') do
     user_id = session[:user_id]
     @users=get_users
-    slim(:"/admin/admin_index")
+    slim(:"/user/index")
 end
 
 get('/hird/logged/user/:id') do
@@ -220,7 +220,7 @@ get('/hird/logged/admin/:id/edit') do
     p edit_selected_user(item_id,admin_key)
     p item_id
     @selected_user=edit_selected_user(item_id,admin_key)
-    slim(:"/admin/update_item")
+    slim(:"/admin/edit")
 end
 
 get('/hird/logged/user/:id/chat') do

@@ -18,8 +18,8 @@ def drop_tables(db)
   #db.execute('DROP TABLE IF EXISTS user_information')
   #db.execute('DROP TABLE IF EXISTS relation_list')
   #db.execute('DROP TABLE IF EXISTS error_messages')
-  db.execute('DROP TABLE IF EXISTS admins')
-  #db.execute('DROP TABLE IF EXISTS users')
+  #db.execute('DROP TABLE IF EXISTS admins')
+  db.execute('DROP TABLE IF EXISTS users')
 end
 
 def create_tables(db)
@@ -39,15 +39,22 @@ def create_tables(db)
   #            error_id INTEGER PRIMARY KEY AUTOINCREMENT,
   #            message TEXT)')
               
-  db.execute('CREATE TABLE admins (
-              admin_key TEXT PRIMARY KEY,
-              user TEXT,
-              pwd_digest TEXT)')
-
-  #db.execute('CREATE TABLE users (
-  #            id INTEGER PRIMARY KEY AUTOINCREMENT,
+  #db.execute('CREATE TABLE admins (
+  #            admin_key TEXT PRIMARY KEY,
   #            user TEXT,
   #            pwd_digest TEXT)')
+
+  db.execute('CREATE TABLE users (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user TEXT,
+              pwd_digest TEXT
+              info_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user TEXT NOT NULL,
+              type TEXT,
+              description TEXT,
+              last_failed TEXT DEFAULT "",
+              failed_attempts INTEGER DEFAULT 0,
+              allowed_to_login BOOLEAN DEFAULT 0)')
 end
 
 def populate_tables(db)
