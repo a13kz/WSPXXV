@@ -1,23 +1,24 @@
 #module Model
     require 'date'
+    require 'time'
     def get_selected_users(type,opposite_type,status_type,opposite_status_type,user_id)
         db = SQLite3::Database.new("db/databas.db")
-        selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.info_id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND user_information.info_id=?",user_id)
+        selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN users ON relation_list.#{type} = users.id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND users.id=?",user_id)
         p selected_ids
         selected_users = []
         selected_ids.each do |id|
-            selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE info_id=?",id))
+            selected_users.push(db.get_first_value("SELECT user FROM users WHERE id=?",id))
         end
         return selected_users
     end
 
     def get_matched_users(type,opposite_type,status_type,opposite_status_type,user_id)
         db = SQLite3::Database.new("db/databas.db")
-        selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN user_information ON relation_list.#{type} = user_information.info_id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND user_information.info_id=?",user_id)
+        selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN users ON relation_list.#{type} = users.id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND users.id=?",user_id)
         p selected_ids
         selected_users = []
         selected_ids.each do |id|
-            selected_users.push(db.get_first_value("SELECT user FROM user_information WHERE info_id=?",id))
+            selected_users.push(db.get_first_value("SELECT user FROM users WHERE id=?",id))
         end
         return selected_users
     end
@@ -38,7 +39,7 @@
             type_id=get_type_id(type)
             opp_type_id=get_type_id(opp_type)
             match_status_type=get_status(type)
-            arr = db.execute("SELECT info_id FROM user_information WHERE type=?",opp_type)
+            arr = db.execute("SELECT id FROM users WHERE type=?",opp_type)
             sub_arr = db.execute("SELECT #{opp_type_id} FROM relation_list WHERE #{type_id}=? AND #{match_status_type} NOT NULL",user_id)
             available=arr-sub_arr
             available=available.flatten
@@ -69,7 +70,7 @@
     helpers do
         def get_id(user,path)
             db=connect_to_db(path)
-            return db.get_first_value("SELECT info_id FROM user_information WHERE user=?",user)
+            return db.get_first_value("SELECT id FROM users WHERE user=?",user)
         end
     end
 
@@ -112,7 +113,7 @@
     def get_user(id)
         db=connect_to_db("db/databas.db")
         p "hej"
-        result=db.execute("SELECT * FROM user_information WHERE info_id=?",id)
+        result=db.execute("SELECT * FROM users WHERE id=?",id)
         return result
     end
 
@@ -168,17 +169,40 @@
     def delete_user(user_id)
         db = SQLite3::Database.new("db/databas.db")
         db.execute("DELETE FROM users WHERE id=?",user_id)
-        db.execute("DELETE FROM user_information WHERE info_id=?",user_id)
         db.execute("DELETE FROM relation_list WHERE employer_id=?",user_id)
         db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
     end
 
-    def failed_attempts(user)
+    def failed_attempts(user_id)
         db=connect_to_db("db/databas.db")
-        d = DateTime.now
-        attempts=db.get_first_value("SELECT failed_attempts FROM users WHERE user=?"user)
-        last_time=db.get_first_value("SELECT last_failed FROM users WHERE user=?"user)
-        db.execute("INSERT INTO users (last_failed,failed_attempts,allowed_to_login) VALUES(?,?,?) WHERE user=?",[d,attempts,])
+        d = Time.now.to_s
+        max_attempts=5
+        attempts=db.get_first_value("SELECT failed_attempts FROM users WHERE id=?",user_id)
+        if attempts==0
+        else
+            last_time=db.get_first_value("SELECT last_failed FROM users WHERE id=?",user_id)
+            last_time=Time.parse(last_time)
+        end
+        status=0
+        if attempts >= max_attempts
+            status=1
+        end
+        db.execute("UPDATE users SET last_failed=?,failed_attempts=?,status=? WHERE id=?",[d,attempts+1,status,user_id])
+    end
+
+    def unban(user_id)
+        p "unbanned?"
+        db=connect_to_db("db/databas.db")
+        d = Time.now
+        last_time=db.get_first_value("SELECT last_failed FROM users WHERE id=?",user_id)
+        last_time=Time.parse(last_time)
+        if last_time+5*60<d
+            p "time"
+            db.execute("UPDATE users SET last_failed=?,failed_attempts=?,status=? WHERE id=?",["",0,0,user_id])
+            return true
+        else
+            return false
+        end
     end
 
     def check_password(user,pwd)
@@ -192,11 +216,27 @@
         if admin_result.empty?
             user_id = result.first["id"]
             pwd_digest = result.first["pwd_digest"]
+            stat=db.get_first_value("SELECT status FROM users WHERE id=?",user_id)
+            if stat==1
+                unban(user_id)
+                redirect("/error")
+            end
             if BCrypt::Password.new(pwd_digest) == pwd
                 login_user(user_id)
                 redirect("/hird/logged/user/dashboard")
             else
-                redirect('/hird/error')
+                p stat
+                if stat==0
+                    failed_attempts(user_id)
+                    redirect("/hird/log")
+                else
+                    if unban(user_id)
+                        redirect("/hird/log")
+                    else
+                        redirect("/error")
+                    end
+                    
+                end
             end
         else
             admin_key = admin_result.first["admin_key"]
@@ -205,7 +245,7 @@
                 login_user(admin_key)
                 redirect("/hird/logged/admin/dashboard")
             else
-            redirect('/hird/error')
+                redirect('/hird/error')
             end
         end
     end
@@ -216,8 +256,7 @@
         if result.empty?
             if pwd==pwd_confirm
                 pwd_digest=BCrypt::Password.create(pwd)
-                db.execute("INSERT INTO users (user,pwd_digest) VALUES(?,?)",[user,pwd_digest])
-                db.execute("INSERT INTO user_information (user,type,description) VALUES(?,?,?)",[user,type,desc])
+                db.execute("INSERT INTO users (user,pwd_digest,type,description) VALUES(?,?,?,?)",[user,pwd_digest,type,desc])
                 login_user(get_id(user,"db/databas.db"))
                 #p get_id(user,"db/databas.db")
                 redirect("/hird/logged/user/dashboard")
@@ -231,13 +270,13 @@
 
     def get_user_info(user_id)
         db=connect_to_db("db/databas.db")
-        arr=db.execute("SELECT (user,description,type) FROM user_information WHERE info_id=?",user_id)
+        arr=db.execute("SELECT (user,description,type) FROM users WHERE id=?",user_id)
         return arr
     end
 
     def edit_user(user_id)
         db=connect_to_db("db/databas.db")
-        return db.execute("SELECT * FROM user_information WHERE info_id=?", user_id).first
+        return db.execute("SELECT * FROM users WHERE id=?", user_id).first
     end
 
 
@@ -248,24 +287,24 @@
         p arr
         if arr.include?(admin_key)
             db.results_as_hash=true
-            return db.execute("SELECT * FROM user_information WHERE info_id=?", item_id).first
+            return db.execute("SELECT * FROM users WHERE id=?", item_id).first
         end
     end
 
     def update_user(user_id,desc)
         db=connect_to_db("db/databas.db")
-        db.execute("UPDATE user_information SET description = ? WHERE info_id = ? ", [desc, user_id])
+        db.execute("UPDATE users SET description = ? WHERE id = ? ", [desc, user_id])
     end
 
     def get_current_item(id)
         db=connect_to_db("db/databas.db")
-        arr=db.execute("SELECT user,description FROM user_information WHERE info_id=?",id)
+        arr=db.execute("SELECT user,description FROM users WHERE id=?",id)
         return arr
     end
 
     def get_username(user_id)
         db=connect_to_db("db/databas.db")
-        return db.get_first_value("SELECT user FROM user_information WHERE info_id=?",user_id)
+        return db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
     end
 
     def validate_password(pass)
@@ -274,7 +313,7 @@
 
     def get_users
         db=connect_to_db("db/databas.db")
-        return db.execute("SELECT * FROM user_information")
+        return db.execute("SELECT * FROM user")
     end
 
     def autherization(user_id)

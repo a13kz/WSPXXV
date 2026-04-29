@@ -47,14 +47,12 @@ def create_tables(db)
   db.execute('CREATE TABLE users (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               user TEXT,
-              pwd_digest TEXT
-              info_id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user TEXT NOT NULL,
+              pwd_digest TEXT,
               type TEXT,
               description TEXT,
               last_failed TEXT DEFAULT "",
               failed_attempts INTEGER DEFAULT 0,
-              allowed_to_login BOOLEAN DEFAULT 0)')
+              status BOOLEAN DEFAULT 0)')
 end
 
 def populate_tables(db)
