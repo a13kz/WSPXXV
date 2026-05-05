@@ -1,6 +1,17 @@
-#module Model
+module Model
     require 'date'
     require 'time'
+    
+    # Retrieves users from the opposite party where with an active matching status and the users is nil (pending requests).
+    #
+    # @params [String] type the current user's role in the relation_list
+    # @params [String] opposite_type the opposite role from the current user
+    # @params [String] status_type the current user's type of status
+    # @params [String] opposite_status_type the current user's opposite type of status
+    # @params [Integer] user_id the ID of the current user
+    #
+    # @return [Array<String>] a list of users whom have sent a request to the current user but not yet received a response
+
     def get_selected_users(type,opposite_type,status_type,opposite_status_type,user_id)
         db = SQLite3::Database.new("db/databas.db")
         selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN users ON relation_list.#{type} = users.id WHERE #{opposite_status_type}=1 AND #{status_type} IS NULL AND users.id=?",user_id)
@@ -12,6 +23,15 @@
         return selected_users
     end
 
+    # Retrieves users in which both parties have an active status in the relationship (mutual matches).
+    #
+    # @params [String] type the current user's role in the relation_list
+    # @params [String] opposite_type the opposite role from the current user
+    # @params [String] status_type the current user's type of status
+    # @params [String] opposite_status_type the current user's opposite type of status
+    # @param [Integer] user_id the ID of the current user
+    #
+    # @return [Array<String>] a list of usernames who have mutually matched with the current user
     def get_matched_users(type,opposite_type,status_type,opposite_status_type,user_id)
         db = SQLite3::Database.new("db/databas.db")
         selected_ids=db.execute("SELECT #{opposite_type} FROM relation_list INNER JOIN users ON relation_list.#{type} = users.id WHERE #{opposite_status_type}=1 AND #{status_type}=1 AND users.id=?",user_id)
@@ -23,35 +43,49 @@
         return selected_users
     end
 
+    # Connects to a SQLite3 database and returns the connection with results as hash.
+    #
+    # @param [String] path path to the database
+    #
+    # @return [SQLite3::Database] database connection
+
     def connect_to_db(path)
         db = SQLite3::Database.new(path)
         db.results_as_hash = true
         return db
     end
 
-
-    helpers do
-        def generate_new_path(type,user_id)
-
-            db=connect_to_db("db/databas.db")
-            db.results_as_hash=false
-            opp_type=get_opposite_type(type)
-            type_id=get_type_id(type)
-            opp_type_id=get_type_id(opp_type)
-            match_status_type=get_status(type)
-            arr = db.execute("SELECT id FROM users WHERE type=?",opp_type)
-            sub_arr = db.execute("SELECT #{opp_type_id} FROM relation_list WHERE #{type_id}=? AND #{match_status_type} NOT NULL",user_id)
-            available=arr-sub_arr
-            available=available.flatten
-            selected_id = available.sample
-            if available.empty?
-                p "no more users avalible"
-                redirect("/hird/logged/user/dashboard")
-            end
-                redirect("/hird/logged/user/#{selected_id}")
-            return
+    # Generates new path by selecting a random available user of the opposite type.
+    #
+    # @param [String] type the type of the current user
+    # @param [Integer] user_id the ID of the current user
+    #
+    # @return [void] redirects to the selected user's page or dashboard if no users are available
+    def generate_new_path(type,user_id)
+        db=connect_to_db("db/databas.db")
+        db.results_as_hash=false
+        opp_type=get_opposite_type(type)
+        type_id=get_type_id(type)
+        opp_type_id=get_type_id(opp_type)
+        match_status_type=get_status(type)
+        arr = db.execute("SELECT id FROM users WHERE type=?",opp_type)
+        sub_arr = db.execute("SELECT #{opp_type_id} FROM relation_list WHERE #{type_id}=? AND #{match_status_type} NOT NULL",user_id)
+        available=arr-sub_arr
+        available=available.flatten
+        selected_id = available.sample
+        if available.empty?
+            p "no more users avalible"
+            redirect("/hird/logged/user/dashboard")
         end
+            redirect("/hird/logged/user/#{selected_id}")
+        return
     end
+
+    # Validates usernames against a set of invalid characters and length restrictions.
+    #
+    # @param [String] user the username to validate
+    #
+    # @return [void] redirects to error page if username is invalid
 
     def validate_username(user)
         invalid_chars=["@","#","!","'","¤","$"," "]
@@ -67,55 +101,76 @@
         end
     end
 
-    helpers do
-        def get_id(user,path)
-            db=connect_to_db(path)
-            return db.get_first_value("SELECT id FROM users WHERE user=?",user)
+    # Retrieves the ID of a user from the database by username.
+    #
+    # @param [String] user the selected user's username
+    # @param [String] path the path to the database
+    #
+    # @return [Integer] the ID of the user
+
+    def get_id(user,path)
+        db=connect_to_db(path)
+        return db.get_first_value("SELECT id FROM users WHERE user=?",user)
+    end
+
+    # Checks whether the user is logged in and redirects them if not.
+    #
+    # @param [Integer] user_id the ID of the current user, or nil if not logged in
+    #
+    # @return [void] redirects to start if user is not logged in
+    def check_login(user_id)
+        if user_id == nil
+            redirect('/hird')
         end
     end
 
-    helpers do
-        def check_login(user_id)
-            if user_id == nil
-                redirect('/hird')
-            end
-        end
-    end
-
-    helpers do
-        def check_ownership(id,user_id,type)
-            db=connect_to_db("db/databas.db")
-            db.results_as_hash=false
-            if type =="emp"
-                ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_i=1",user_id).flatten
-                p ids
-                p id
-                if ids.include?(id)
-                    return
-                #redirect('/hird/logged/dashboard')
-            else
-                redirect('/hird/error')
-            end
-            else
-                ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
-                p ids
-                p id
-                if ids.include?(id)        
+    # Checks whether the current user has ownership/access to a selected user's profile.
+    #
+    # @param [Integer] id the ID of the profile to check access for
+    # @param [Integer] user_id the ID of the current user
+    # @param [String] type the type of the current user
+    #
+    # @return [void] redirects to error page if user does not have access
+    def check_ownership(id,user_id,type)
+        db=connect_to_db("db/databas.db")
+        db.results_as_hash=false
+        if type =="emp"
+            ids=db.execute("SELECT individual_id FROM relation_list WHERE employer_id=? AND match_status_i=1",user_id).flatten
+            p ids
+            p id
+            if ids.include?(id)
                 return
-                #redirect('/hird/logged/dashboard')
-            else
-                redirect('/hird/error')
-            end
-            end
+        else
+            redirect('/hird/error')
+        end
+        else
+            ids=db.execute("SELECT employer_id FROM relation_list WHERE individual_id=? AND match_status_i=1",user_id).flatten
+            if ids.include?(id)        
+            return
+        else
+            redirect('/hird/error')
+        end
         end
     end
 
+    # Retrieves users from database by id.
+    #
+    # @param [Integer] id the id of the selected user
+    # 
+    # @return [Array<Hash>] the users matching the given id
     def get_user(id)
         db=connect_to_db("db/databas.db")
-        p "hej"
         result=db.execute("SELECT * FROM users WHERE id=?",id)
         return result
     end
+
+    # Registers an ignore action between two users in the relation_list.
+    #
+    # @param [String] type the current user's type
+    # @param [Integer] id the ID of the user being ignored
+    # @param [Integer] login_id the ID of the current user
+    #
+    # @return [void]
 
     def ignore(type,id,login_id)
         db = SQLite3::Database.new("db/databas.db")
@@ -136,6 +191,13 @@
         end
     end
 
+    # Registers an add action between two users in the relation_list.
+    #
+    # @param [String] type the current user's type
+    # @param [Integer] id the ID of the user being added
+    # @param [Integer] login_id the ID of the current user
+    #
+    # @return [void]
     def add(type,id,login_id)
         db = SQLite3::Database.new("db/databas.db")
         if type == "emp"
@@ -159,13 +221,22 @@
         end
 
     end
-
+    # Retrieves an error message from the database by error ID.
+    #
+    # @param [Integer] id the ID of the error message selected to be retrived
+    #
+    # @return [String] the error message corresponding to the selected ID
     def get_error_message(id)
         db = SQLite3::Database.new("db/databas.db")
         msg=db.get_first_value("SELECT message FROM error_messages WHERE error_id=?",id)
         return msg
     end
 
+    # Deletes a user and their associated relations from the database
+    #
+    # @param [Integer] user_id the ID of the user to be deleted
+    #
+    # @return [void]
     def delete_user(user_id)
         db = SQLite3::Database.new("db/databas.db")
         db.execute("DELETE FROM users WHERE id=?",user_id)
@@ -173,6 +244,11 @@
         db.execute("DELETE FROM relation_list WHERE individual_id=?",user_id)
     end
 
+    # Records failed login attempts and bans the user if the maximum amount of attempts have been exceeded
+    #
+    # @param [Integer] user_id the ID of the user who failed to log in
+    #
+    # @return [void]
     def failed_attempts(user_id)
         db=connect_to_db("db/databas.db")
         d = Time.now.to_s
@@ -190,8 +266,12 @@
         db.execute("UPDATE users SET last_failed=?,failed_attempts=?,status=? WHERE id=?",[d,attempts+1,status,user_id])
     end
 
+    # Checks whether a banned user's ban period has expired and unbans them if so.
+    #
+    # @param [Integer] user_id the ID of the user to check
+    #
+    # @return [Boolean] true if the period is over, false if the ban is still active
     def unban(user_id)
-        p "unbanned?"
         db=connect_to_db("db/databas.db")
         d = Time.now
         last_time=db.get_first_value("SELECT last_failed FROM users WHERE id=?",user_id)
@@ -204,6 +284,13 @@
             return false
         end
     end
+
+    # Validates login credentials and redirects to the appropriate dashboard on success.
+    #
+    # @param [String] user the username of the user attempting to log in
+    # @param [String] pwd the password to verify
+    #
+    # @return [void] redirects user to user or admin dashboard on success, error page on failure
 
     def check_password(user,pwd)
         db=connect_to_db("db/databas.db")
@@ -250,6 +337,16 @@
         end
     end
 
+    # Validates and processes a new user registration.
+    #
+    # @param [String] user the desired username
+    # @param [String] pwd the desired password
+    # @param [String] pwd_confirm the password confirmation
+    # @param [String] type the type of user being registered
+    # @param [String] desc the user's description
+    #
+    # @return [void] redirects to dashboard on success, error page on failure
+
     def check_register(user,pwd,pwd_confirm,type,desc)
         db=connect_to_db("db/databas.db")
         result=db.execute("SELECT id FROM users WHERE user=?",user)
@@ -268,17 +365,35 @@
         end
     end
 
+    # Retrieves basic info (username, description, type) for a given user.
+    #
+    # @param [Integer] user_id the ID of the user
+    #
+    # @return [Array<Hash>] the user's info
+
     def get_user_info(user_id)
         db=connect_to_db("db/databas.db")
         arr=db.execute("SELECT (user,description,type) FROM users WHERE id=?",user_id)
         return arr
     end
 
+    # Retrieves all fields for a given user with the purpose of editing them
+    #
+    # @param [Integer] user_id the ID of the user to edit
+    #
+    # @return [Hash] the user info
+
     def edit_user(user_id)
         db=connect_to_db("db/databas.db")
         return db.execute("SELECT * FROM users WHERE id=?", user_id).first
     end
-
+    
+    # Retrieves user information for admin editing purposes, if the admin key is valid.
+    #
+    # @param [Integer] item_id the ID of the user to edit
+    # @param [String] admin_key the admin key to validate
+    #
+    # @return [Hash, nil] the user info if the admin key is valid, nil otherwise
 
     def edit_selected_user(item_id,admin_key)
         db=connect_to_db("db/databas.db")
@@ -291,32 +406,43 @@
         end
     end
 
+    # Updates the description of a given user.
+    #
+    # @param [Integer] user_id the ID of the user to update
+    # @param [String] desc the new description
+    #
+    # @return [void]
     def update_user(user_id,desc)
         db=connect_to_db("db/databas.db")
         db.execute("UPDATE users SET description = ? WHERE id = ? ", [desc, user_id])
     end
 
+    # Retrieves the username and description for a given user.
+    #
+    # @param [Integer] id the ID of the user
+    #
+    # @return [Array<Hash>] the username and description of the user
     def get_current_item(id)
         db=connect_to_db("db/databas.db")
         arr=db.execute("SELECT user,description FROM users WHERE id=?",id)
         return arr
     end
 
+    # Retrieves the username of a given user based on ID.
+    #
+    # @param [Integer] user_id the ID of the user
+    #
+    # @return [String] the username of the user
     def get_username(user_id)
         db=connect_to_db("db/databas.db")
         return db.get_first_value("SELECT user FROM users WHERE id=?",user_id)
     end
 
-    def validate_password(pass)
-
-    end
-
+    # Retrieves all users from the database.
+    #
+    # @return [Array<Hash>] all users
     def get_users
         db=connect_to_db("db/databas.db")
         return db.execute("SELECT * FROM user")
     end
-
-    def autherization(user_id)
-        db=connect_to_db("db/databas.db")
-    end
-#end
+end
